@@ -44,7 +44,7 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "pg_hba",
 	Short: "Manages de pg_hba.conf file",
-	Long:  `pg_hba is a CLI library created to manage the pg_hba.conf file.`,
+	Long:  `pg_hba is a CLI created to manage the pg_hba.conf file.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
