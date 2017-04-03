@@ -49,6 +49,7 @@ func check(e error) {
 	}
 }
 
+// TODO: add line number
 type hbaRule struct {
 	connectionType string
 	databaseName   string
@@ -56,6 +57,7 @@ type hbaRule struct {
 	ipAddress      string
 	networkMask    string
 	authType       string
+	lineNumber     int
 }
 
 type hbaRules []hbaRule
@@ -82,8 +84,12 @@ func openFile(filename string) hbaRules {
 	fileRules := []hbaRule{}
 
 	scanner := bufio.NewScanner(file)
+
+	lineNo := 0
+
 	for scanner.Scan() {
 		newLine := scanner.Text()
+		lineNo += 1
 
 		if strings.HasPrefix(newLine, "host") || strings.HasPrefix(newLine, "local") {
 
@@ -93,7 +99,8 @@ func openFile(filename string) hbaRules {
 			newRule := hbaRule{
 				connectionType: matches[0],
 				databaseName:   matches[1],
-				userName:       matches[2]}
+				userName:       matches[2],
+				lineNumber:     lineNo}
 
 			if len(matches) == 6 { // full mask
 				newRule.ipAddress = matches[3]
@@ -139,10 +146,10 @@ var searchCmd = &cobra.Command{
 		sort.Sort(rules)
 		table := termtables.CreateTable()
 
-		table.AddHeaders("Type", "Database", "User/Group", "Host", "Mask", "Method")
+		table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
 
 		for _, element := range rules {
-			table.AddRow(element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
+			table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
 		}
 		fmt.Println(table.Render())
 
