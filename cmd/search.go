@@ -61,23 +61,10 @@ type hbaRule struct {
 	comments       string
 }
 
-type hbaRules []hbaRule
+// more details about sort : http://nerdyworm.com/blog/2013/05/15/sorting-a-slice-of-structs-in-go/
+//     and: http://stackoverflow.com/questions/28999735/what-is-the-shortest-way-to-simply-sort-an-array-of-structs-by-arbitrary-field
 
-// more details here: http://nerdyworm.com/blog/2013/05/15/sorting-a-slice-of-structs-in-go/
-
-func (slice hbaRules) Len() int {
-	return len(slice)
-}
-
-func (slice hbaRules) Less(i, j int) bool {
-	return slice[i].connectionType < slice[j].connectionType
-}
-
-func (slice hbaRules) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func openFile(filename string) hbaRules {
+func openFile(filename string) []hbaRule {
 	file, err := os.Open(filename)
 	check(err)
 	defer file.Close()
@@ -160,7 +147,19 @@ func printSlice(s []hbaRule) {
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Find a rule on the pg_hba.conf file.",
-	Long:  `Find a rule on the pg_hba.conf file.`,
+	Long: `Find a rule on the pg_hba.conf file.
+
+Valid sorting options:
+ - connectionType
+ - databaseName
+ - userName
+ - ipAddress
+ - networkMask
+ - authType
+ - lineNumber
+ - comments
+
+	`,
 	Run: func(cmd *cobra.Command, args []string) {
 		hba_file := pgdata + "/pg_hba.conf"
 
@@ -168,8 +167,7 @@ var searchCmd = &cobra.Command{
 			fmt.Println("Using the hba file: ", hba_file)
 		}
 
-		rules := openFile(hba_file)
-		sort.Sort(rules)
+		rules := sortRules(openFile(hba_file))
 		table := termtables.CreateTable()
 
 		if foundComments {
@@ -193,8 +191,39 @@ var searchCmd = &cobra.Command{
 	},
 }
 
+func sortRules(ruleList []hbaRule) []hbaRule {
+	switch sortOrder {
+	case "connectionType":
+		sort.Sort(connectionTypeSorter(ruleList))
+	case "databaseName":
+		sort.Sort(databaseNameSorter(ruleList))
+	case "userName":
+		sort.Sort(userNameSorter(ruleList))
+	case "ipAddress":
+		sort.Sort(ipAddressSorter(ruleList))
+	case "networkMask":
+		sort.Sort(networkMaskSorter(ruleList))
+	case "authType":
+		sort.Sort(authTypeSorter(ruleList))
+	case "lineNumber":
+		sort.Sort(lineNumberSorter(ruleList))
+	case "comments":
+		sort.Sort(commentsSorter(ruleList))
+	default:
+		sort.Sort(lineNumberSorter(ruleList))
+	}
+
+	return ruleList
+}
+
+var (
+	sortOrder string = "lineNumber"
+)
+
 func init() {
 	RootCmd.AddCommand(searchCmd)
+
+	RootCmd.PersistentFlags().StringVarP(&sortOrder, "sort-by", "s", sortOrder, "Change the sort order")
 
 	// Here you will define your flags and configuration settings.
 
