@@ -58,6 +58,7 @@ type hbaRule struct {
 	networkMask    string
 	authType       string
 	lineNumber     int
+	comments       string
 }
 
 type hbaRules []hbaRule
@@ -93,8 +94,15 @@ func openFile(filename string) hbaRules {
 
 		if strings.HasPrefix(newLine, "host") || strings.HasPrefix(newLine, "local") {
 
-			re := regexp.MustCompile(`[A-Za-z0-9_'\./\+\:]+`)
-			matches := re.FindAllString(newLine, -1)
+			// re := regexp.MustCompile(`[A-Za-z0-9_'\./\+\:\,]+`)
+			// matches := re.FindAllString(newLine, -1)
+			comments := strings.Split(newLine, "#")
+
+			// if len(comments) > 1 {
+			matches := strings.Fields(comments[0])
+			// } else
+
+			// fmt.Printf("len=%d cap=%d %v\n", len(comments), cap(comments), comments)
 
 			newRule := hbaRule{
 				connectionType: matches[0],
@@ -109,11 +117,19 @@ func openFile(filename string) hbaRules {
 			} else if len(matches) == 5 { // /32 type mask
 
 				s := strings.Split(matches[3], "/")
+
 				newRule.ipAddress = s[0]
 				newRule.networkMask = "/" + s[1]
 				newRule.authType = matches[4]
 			} else { // local connection
 				newRule.authType = matches[3]
+			}
+
+			if len(comments) > 1 {
+				if !foundComments {
+					foundComments = true
+				}
+				newRule.comments = comments[1]
 			}
 
 			fileRules = append(fileRules, newRule)
@@ -125,6 +141,15 @@ func openFile(filename string) hbaRules {
 	}
 
 	return fileRules
+}
+
+var (
+	foundComments bool = false
+)
+
+func removeComments(content []byte) []byte {
+	cppcmt := regexp.MustCompile(`#.*`)
+	return cppcmt.ReplaceAll(content, []byte(""))
 }
 
 func printSlice(s []hbaRule) {
@@ -139,17 +164,27 @@ var searchCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		hba_file := pgdata + "/pg_hba.conf"
 
-		// TODO: Work your own magic here
-		// fmt.Println("Using the hba file: ", hba_file)
+		if verboseMode {
+			fmt.Println("Using the hba file: ", hba_file)
+		}
 
 		rules := openFile(hba_file)
 		sort.Sort(rules)
 		table := termtables.CreateTable()
 
-		table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
+		if foundComments {
+			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method", "Comment")
+		} else {
+
+			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
+		}
 
 		for _, element := range rules {
-			table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
+			if foundComments {
+				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType, element.comments)
+			} else {
+				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
+			}
 		}
 		fmt.Println(table.Render())
 
