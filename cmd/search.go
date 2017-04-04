@@ -230,8 +230,8 @@ var (
 func init() {
 	RootCmd.AddCommand(searchCmd)
 
-	RootCmd.PersistentFlags().StringVarP(&sortOrder, "sort-by", "s", sortOrder, "Change the sort order")
-	RootCmd.PersistentFlags().IntVarP(&rowLimit, "limit", "l", rowLimit, "Limit the result for x rows")
+	searchCmd.Flags().StringVarP(&sortOrder, "sort-by", "s", sortOrder, "Change the sort order")
+	searchCmd.Flags().IntVarP(&rowLimit, "limit", "l", rowLimit, "Limit the result for x rows")
 
 	// Here you will define your flags and configuration settings.
 
