@@ -120,6 +120,11 @@ func openFile(filename string) []hbaRule {
 			}
 
 			fileRules = append(fileRules, newRule)
+
+			// limit the max results
+			if rowLimit > 0 && len(fileRules) >= rowLimit {
+				break
+			}
 		}
 	}
 
@@ -183,6 +188,7 @@ Valid sorting options:
 			} else {
 				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
 			}
+
 		}
 		fmt.Println(table.Render())
 
@@ -218,12 +224,14 @@ func sortRules(ruleList []hbaRule) []hbaRule {
 
 var (
 	sortOrder string = "lineNumber"
+	rowLimit  int    = -1
 )
 
 func init() {
 	RootCmd.AddCommand(searchCmd)
 
 	RootCmd.PersistentFlags().StringVarP(&sortOrder, "sort-by", "s", sortOrder, "Change the sort order")
+	RootCmd.PersistentFlags().IntVarP(&rowLimit, "limit", "l", rowLimit, "Limit the result for x rows")
 
 	// Here you will define your flags and configuration settings.
 
