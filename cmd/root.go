@@ -59,8 +59,20 @@ func Execute() {
 	}
 }
 
+
+var (
+	pgdata      = viper.GetString("pgdata")
+	hbaFile     string
+	verboseMode bool = false
+)	
+
 func init() {
 	cobra.OnInitialize(initConfig)
+
+
+	RootCmd.PersistentFlags().StringVarP(&pgdata, "pgdata", "D", pgdata, "PostgreSQL DATA Directory")
+	RootCmd.PersistentFlags().StringVar(&hbaFile, "hba-file", "", "pg_hba.conf file PATH")
+	RootCmd.PersistentFlags().BoolVarP(&verboseMode, "verbose", "v", verboseMode, "Verbose mode")
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports Persistent Flags, which, if defined here,
