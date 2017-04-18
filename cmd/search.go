@@ -37,6 +37,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/apcera/termtables"
@@ -168,9 +169,7 @@ Valid sorting options:
 	Run: func(cmd *cobra.Command, args []string) {
 		hba_file := pgdata + "/pg_hba.conf"
 
-		if verboseMode {
-			fmt.Println("Using the hba file: ", hba_file)
-		}
+		verboseLog("Using the hba file: ", hba_file)
 
 		rules := sortRules(openFile(hba_file))
 		table := termtables.CreateTable()
@@ -178,7 +177,6 @@ Valid sorting options:
 		if foundComments {
 			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method", "Comment")
 		} else {
-
 			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
 		}
 
@@ -188,9 +186,9 @@ Valid sorting options:
 			} else {
 				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
 			}
-
 		}
 		fmt.Println(table.Render())
+		verboseLog("("+strconv.Itoa(len(rules)), "rows found)")
 
 		// local: (?P<type>(local))\s+(?P<database>(\w+))\s+(?P<user>(\w+))\s+(?P<mode>(\w+))
 
