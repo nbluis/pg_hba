@@ -42,25 +42,34 @@ var addCmd = &cobra.Command{
 	Short: "Add a new rule on the pg_hba.conf file",
 	Long:  `Add a new rule on the pg_hba.conf file`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Work your own magic here
-		// fmt.Printf("%-6s %-6s \n", hostAddress, username)
+		if len(args) == 0 {
+			fmt.Println("Missing the description.")
+		} else {
 
-		fmt.Printf("## %s \n", args[0])
+			newData := hbaRule{
+				authType:     "host",
+				userName:     username,
+				databaseName: database,
+				ipAddress:    hostAddress,
+				comments:     args[0]}
 
-		fmt.Printf("host   %s    all    %s/32   md5\n", username, hostAddress)
-		// fmt.Println("add called")
+			fmt.Println(newData)
+			// fmt.Printf("## %s \n", args[0])
+			// fmt.Printf("host   %s    %s    %s/32   md5\n", username, database, hostAddress)
+		}
 	},
 }
 
 var (
 	hostAddress = "127.0.0.1"
-	username    = "client"
+	username    = "user"
+	database    = "all"
 )
 
 func init() {
 	RootCmd.AddCommand(addCmd)
 
-	addCmd.SetArgs([]string{"sub", "arg1", "arg2"})
+	// addCmd.SetArgs([]string{"sub", "arg1", "arg2"})
 
 	// Here you will define your flags and configuration settings.
 
@@ -70,6 +79,7 @@ func init() {
 	// addCmd.ar
 	addCmd.Flags().StringVarP(&hostAddress, "host", "h", hostAddress, "Host Address")
 	addCmd.Flags().StringVarP(&username, "username", "U", username, "Username")
+	addCmd.Flags().StringVarP(&database, "database", "d", database, "Database name")
 
 	addCmd.Flags().BoolP("help", "H", false, "Help message add")
 
