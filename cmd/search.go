@@ -32,6 +32,7 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -43,12 +44,6 @@ import (
 	"github.com/apcera/termtables"
 	"github.com/spf13/cobra"
 )
-
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
 
 // TODO: add line number
 type hbaRule struct {
@@ -65,12 +60,15 @@ type hbaRule struct {
 // more details about sort : http://nerdyworm.com/blog/2013/05/15/sorting-a-slice-of-structs-in-go/
 //     and: http://stackoverflow.com/questions/28999735/what-is-the-shortest-way-to-simply-sort-an-array-of-structs-by-arbitrary-field
 
-func openFile(filename string) []hbaRule {
+func processFile(filename string) ([]hbaRule, error) {
 	file, err := os.Open(filename)
-	check(err)
 	defer file.Close()
 
 	fileRules := []hbaRule{}
+
+	if err != nil {
+		return fileRules, err
+	}
 
 	scanner := bufio.NewScanner(file)
 
@@ -126,6 +124,9 @@ func openFile(filename string) []hbaRule {
 			if rowLimit > 0 && len(fileRules) >= rowLimit {
 				break
 			}
+		} else {
+			err := errors.New("emit macho dwarf: elf header corrupted")
+			return fileRules, err
 		}
 	}
 
@@ -133,7 +134,7 @@ func openFile(filename string) []hbaRule {
 		log.Fatal(err)
 	}
 
-	return fileRules
+	return fileRules, nil
 }
 
 var (
@@ -147,6 +148,26 @@ func removeComments(content []byte) []byte {
 
 func printSlice(s []hbaRule) {
 	fmt.Printf("len=%d cap=%d %v\n", len(s), cap(s), s)
+}
+
+func formatRules(ruleList []hbaRule) string {
+
+	table := termtables.CreateTable()
+
+	if foundComments {
+		table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method", "Comment")
+	} else {
+		table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
+	}
+
+	for _, element := range ruleList {
+		if foundComments {
+			table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType, element.comments)
+		} else {
+			table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
+		}
+	}
+	return table.Render()
 }
 
 // searchCmd represents the search command
@@ -171,23 +192,14 @@ Valid sorting options:
 
 		verboseLog("Using the hba file: ", hba_file)
 
-		rules := sortRules(openFile(hba_file))
-		table := termtables.CreateTable()
+		fileRules, err := processFile(hba_file)
 
-		if foundComments {
-			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method", "Comment")
-		} else {
-			table.AddHeaders("Line", "Type", "Database", "User/Group", "Host", "Mask", "Method")
-		}
+		check(err)
 
-		for _, element := range rules {
-			if foundComments {
-				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType, element.comments)
-			} else {
-				table.AddRow(element.lineNumber, element.connectionType, element.databaseName, element.userName, element.ipAddress, element.networkMask, element.authType)
-			}
-		}
-		fmt.Println(table.Render())
+		rules := sortRules(fileRules)
+
+		fmt.Println(formatRules(rules))
+
 		verboseLog("("+strconv.Itoa(len(rules)), "rows found)")
 
 		// local: (?P<type>(local))\s+(?P<database>(\w+))\s+(?P<user>(\w+))\s+(?P<mode>(\w+))
